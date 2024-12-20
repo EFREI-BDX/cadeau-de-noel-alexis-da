@@ -1,8 +1,8 @@
--- MySQL dump 10.13  Distrib 8.0.36, for Win64 (x86_64)
+-- MySQL dump 10.13  Distrib 8.0.40, for Win64 (x86_64)
 --
 -- Host: localhost    Database: ventepizza
 -- ------------------------------------------------------
--- Server version	8.0.36
+-- Server version	8.0.40
 
 /*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
 /*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
@@ -18,7 +18,7 @@
 --
 -- Dumping routines for database 'ventepizza'
 --
-/*!50003 DROP PROCEDURE IF EXISTS `getNextOrderNumber` */;
+/*!50003 DROP PROCEDURE IF EXISTS `deleteEmployee` */;
 /*!50003 SET @saved_cs_client      = @@character_set_client */ ;
 /*!50003 SET @saved_cs_results     = @@character_set_results */ ;
 /*!50003 SET @saved_col_connection = @@collation_connection */ ;
@@ -28,20 +28,33 @@
 /*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
 /*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
 DELIMITER ;;
-CREATE DEFINER=`root`@`localhost` PROCEDURE `getNextOrderNumber`()
-BEGIN
-    DECLARE lastOrderNumber INT;
-    DECLARE prefixOrderNumber VARCHAR(6);
-
-    SET prefixOrderNUmber = CONCAT(RIGHT(YEAR(CURDATE()), 2), MONTH(CURDATE()), DAY(CURDATE()));
-    SET lastOrderNumber = (SELECT MAX(CAST(RIGHT(vente.numVente, 4) AS UNSIGNED)) + 1
-                           FROM vente
-                           WHERE LEFT(vente.numVente, 6) = prefixOrderNumber);
-    IF lastOrderNumber IS NULL THEN
-        SET lastOrderNumber = 1;
-    END IF;
-    SELECT CONCAT(prefixOrderNumber, LPAD(lastOrderNumber, 4, '0')) AS orderNumber;
-END ;;
+CREATE DEFINER=`root`@`localhost` PROCEDURE `deleteEmployee`(IN _em_no INT)
+BEGIN
+    DECLARE exist INT;
+    DECLARE errorMessage VARCHAR(255);
+
+    SET exist = (SELECT COUNT(*) FROM employees WHERE employees.emp_no = _em_no);
+    IF exist = 0 THEN
+        SET errorMessage = CONCAT('The employee with emp_no = ', _em_no, 'does not exist');
+        SIGNAl SQLSTATE '45000' SET MESSAGE_TEXT = errorMessage;
+    END IF;
+
+    SET exist = (SELECT COUNT(*) FROM salaries WHERE salaries.emp_no = _em_no AND salaries.to_date = '9999-01-01');
+    IF exist = 0 THEN
+        SET errorMessage = CONCAT('The employee with emp_no = ', _em_no, 'is already deleted');
+        SIGNAl SQLSTATE '45000' SET MESSAGE_TEXT = errorMessage;
+    END IF;
+
+    UPDATE salaries SET to_date = CURDATE()
+    WHERE emp_no = _em_no AND to_date = '9999-01-01';
+
+    UPDATE titles SET to_date = CURDATE()
+    WHERE emp_no = _em_no AND to_date = '9999-01-01';
+
+    UPDATE dept_emp SET to_date = CURDATE()
+    WHERE emp_no = _em_no AND to_date = '9999-01-01';
+
+end ;;
 DELIMITER ;
 /*!50003 SET sql_mode              = @saved_sql_mode */ ;
 /*!50003 SET character_set_client  = @saved_cs_client */ ;
@@ -57,4 +70,4 @@ DELIMITER ;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2024-11-25 22:17:06
+-- Dump completed on 2024-12-20 18:30:02
